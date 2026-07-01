@@ -1,0 +1,55 @@
+<svg viewBox="0 0 800 650" xmlns="http://www.w3.org/2000/svg" font-family="Inter, -apple-system, 'Segoe UI', sans-serif">
+  <rect width="800" height="650" fill="#ffffff"/>
+
+  <!-- Titre -->
+  <rect x="44" y="26" width="250" height="32" rx="6" fill="#b4552d" opacity="0.10"/>
+  <text x="56" y="49" font-size="21" font-weight="800" fill="#1e3a52">One customer, four silos</text>
+  <text x="56" y="80" font-size="12.5" fill="#6f6052">How Tessera CDP rebuilds the real journey, from ad click to purchase</text>
+
+  <!-- Étape 1 -->
+  <circle cx="66" cy="123" r="16" fill="#ffffff" stroke="#b4552d" stroke-width="2"/>
+  <text x="66" y="128" font-size="13" font-weight="700" fill="#b4552d" text-anchor="middle">1</text>
+  <rect x="92" y="100" width="380" height="92" rx="12" fill="#b4552d" opacity="0.06"/>
+  <rect x="92" y="100" width="380" height="92" rx="12" fill="none" stroke="#b4552d" stroke-opacity="0.40"/>
+  <text x="112" y="130" font-size="14" font-weight="700" fill="#1e3a52">Track everything</text>
+  <text x="112" y="152" font-size="11.5" fill="#5d6b78">GA4, Meta Ads, Shopify, Mailchimp: the same person</text>
+  <text x="112" y="169" font-size="11.5" fill="#5d6b78">hides behind four IDs, in four silos.</text>
+
+  <path d="M474 178 C 530 190, 560 205, 580 226" stroke="#b3a18c" stroke-width="1.5" fill="none"/>
+  <path d="M573 222 L 582 228 L 575 233" fill="none" stroke="#b3a18c" stroke-width="1.5"/>
+
+  <!-- Étape 2 -->
+  <circle cx="346" cy="263" r="16" fill="#ffffff" stroke="#1e3a52" stroke-width="2"/>
+  <text x="346" y="268" font-size="13" font-weight="700" fill="#1e3a52" text-anchor="middle">2</text>
+  <rect x="372" y="240" width="380" height="92" rx="12" fill="#1e3a52" opacity="0.05"/>
+  <rect x="372" y="240" width="380" height="92" rx="12" fill="none" stroke="#1e3a52" stroke-opacity="0.35"/>
+  <text x="392" y="270" font-size="14" font-weight="700" fill="#1e3a52">Resolve identity</text>
+  <text x="392" y="292" font-size="11.5" fill="#5d6b78">Email hash + session links connect the four profiles</text>
+  <text x="392" y="309" font-size="11.5" fill="#5d6b78">into one canonical unified_user_id (union-find, in SQL).</text>
+
+  <path d="M372 318 C 300 332, 260 345, 230 366" stroke="#b3a18c" stroke-width="1.5" fill="none"/>
+  <path d="M237 362 L 228 368 L 235 373" fill="none" stroke="#b3a18c" stroke-width="1.5"/>
+
+  <!-- Étape 3 -->
+  <circle cx="66" cy="403" r="16" fill="#ffffff" stroke="#3a5670" stroke-width="2"/>
+  <text x="66" y="408" font-size="13" font-weight="700" fill="#3a5670" text-anchor="middle">3</text>
+  <rect x="92" y="380" width="380" height="92" rx="12" fill="#3a5670" opacity="0.05"/>
+  <rect x="92" y="380" width="380" height="92" rx="12" fill="none" stroke="#3a5670" stroke-opacity="0.35"/>
+  <text x="112" y="410" font-size="14" font-weight="700" fill="#1e3a52">Rebuild the journey</text>
+  <text x="112" y="432" font-size="11.5" fill="#5d6b78">Every touchpoint reordered, from first ad click</text>
+  <text x="112" y="449" font-size="11.5" fill="#5d6b78">to purchase: cross-channel funnels and sessions see it all.</text>
+
+  <path d="M474 458 C 530 470, 560 485, 580 506" stroke="#b3a18c" stroke-width="1.5" fill="none"/>
+  <path d="M573 502 L 582 508 L 575 513" fill="none" stroke="#b3a18c" stroke-width="1.5"/>
+
+  <!-- Étape 4 -->
+  <circle cx="346" cy="543" r="16" fill="#ffffff" stroke="#16a34a" stroke-width="2"/>
+  <text x="346" y="548" font-size="13" font-weight="700" fill="#16a34a" text-anchor="middle">4</text>
+  <rect x="372" y="520" width="380" height="92" rx="12" fill="#16a34a" opacity="0.05"/>
+  <rect x="372" y="520" width="380" height="92" rx="12" fill="none" stroke="#16a34a" stroke-opacity="0.35"/>
+  <text x="392" y="550" font-size="14" font-weight="700" fill="#1e3a52">Attribute revenue</text>
+  <text x="392" y="572" font-size="11.5" fill="#5d6b78">First / last / linear / position-based compared side by side:</text>
+  <text x="392" y="589" font-size="11.5" fill="#5d6b78">true ROI per channel, no last-click guesswork.</text>
+
+
+</svg>
