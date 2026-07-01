@@ -1,0 +1,16 @@
+# ----------------------------------------------------------------------------
+# Profil de connexion Soda Core.
+#
+# Soda pointe sur le même fichier DuckDB que dbt-duckdb matérialise.
+# En production, seul le bloc de connexion change (Snowflake, BigQuery) ;
+# les checks eux-mêmes restent identiques.
+# ----------------------------------------------------------------------------
+
+# Chemin relatif à la racine du repo (Makefile et CI lancent `soda scan`
+# depuis la racine). Doit correspondre au `path` du profil dbt
+# (dbt/profiles.yml.example : ../warehouse/tessera.duckdb).
+data_source tessera:
+  type: duckdb
+  path: ./warehouse/tessera.duckdb
+  read_only: true
+  schema: marts

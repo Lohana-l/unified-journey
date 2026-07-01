@@ -1,0 +1,49 @@
+# ----------------------------------------------------------------------------
+# Soda Core checks : gold-layer contracts.
+#
+# Schema tests in dbt cover correctness ("can it run?"). Soda checks here
+# cover trustworthiness ("can a marketer act on it?") : distributions,
+# freshness, and business-rule plausibility.
+# ----------------------------------------------------------------------------
+
+checks for dim_users:
+  - row_count > 0:
+      name: At least one unified user exists
+  - duplicate_count(unified_user_id) = 0
+  - missing_count(consent_status) = 0
+  - invalid_count(consent_status) = 0:
+      valid values: [granted, anonymous]
+
+checks for dim_channels:
+  - row_count between 5 and 50:
+      name: Channel dimension has a sensible cardinality
+  - duplicate_count(channel_key) = 0
+
+checks for fct_conversions:
+  - row_count > 0
+  - missing_count(conversion_id) = 0
+  - missing_count(unified_user_id) = 0
+  - min(conversion_value_eur) >= 0
+  # Generous window on purpose: the demo warehouse persists between sessions,
+  # so data up to a month old is tolerated before flagging. A full run
+  # (make pipeline) always regenerates fresh data, so CI stays green.
+  - freshness(conversion_ts) < 32d:
+      name: Conversions from the last 30 days
+
+checks for fct_touchpoints:
+  - row_count > 0
+  - missing_count(touchpoint_id) = 0
+  - missing_count(channel_key) = 0:
+      name: Every touchpoint is attributable to a channel
+
+checks for fct_sessions:
+  - row_count > 0
+  - missing_count(stitched_session_id) = 0
+  - min(session_duration_sec) >= 0:
+      name: Sessions never have negative duration
+
+checks for fct_funnel_steps:
+  - row_count between 5 and 50:
+      name: One funnel row per channel
+  # business plausibility: paid channels should never bring zero visitors
+  - min(users_visited) > 0
