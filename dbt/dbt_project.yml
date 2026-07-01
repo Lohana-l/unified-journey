@@ -1,0 +1,58 @@
+name: "tessera"
+version: "1.0.0"
+config-version: 2
+
+profile: "tessera"
+
+model-paths:   ["models"]
+analysis-paths: ["analyses"]
+test-paths:     ["tests"]
+seed-paths:     ["seeds"]
+macro-paths:    ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# ---------- Materialisation strategy ----------
+# staging      : views, cheap, freshness follows bronze. Also published to the
+#                silver bucket as Parquet (post-hook) for the medallion layout.
+# intermediate : views, transformation logic, zero storage cost on DuckDB.
+# marts        : DuckDB tables (read by the Streamlit dashboard) and also
+#                published to the gold bucket as Parquet (post-hook). The same
+#                pattern maps to Snowflake/BigQuery in prod.
+models:
+  tessera:
+    staging:
+      +materialized: view
+      +schema: staging
+      +post-hook: "COPY (SELECT * FROM {{ this }}) TO 's3://{{ env_var('MINIO_BUCKET_SILVER', 'tessera-silver') }}/{{ this.identifier }}/{{ this.identifier }}.parquet' (FORMAT PARQUET)"
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+    marts:
+      +materialized: table
+      +schema: marts
+      +post-hook: "COPY (SELECT * FROM {{ this }}) TO 's3://{{ env_var('MINIO_BUCKET_GOLD', 'tessera-gold') }}/{{ this.identifier }}/{{ this.identifier }}.parquet' (FORMAT PARQUET)"
+
+seeds:
+  tessera:
+    +schema: marts
+
+# ---------- Project-wide variables ----------
+vars:
+  # Attribution window : any touchpoint within N days before a conversion is
+  # eligible for credit. Change this and every attribution number recomputes.
+  attribution_window_days: 30
+
+  # Session timeout : gap of silence (no events) that closes a session.
+  session_timeout_minutes: 30
+
+  # Identity graph : max number of label-propagation iterations. 5 is overkill
+  # for real graphs; kept as a safety cap.
+  identity_graph_max_iterations: 5
+
+  # Analysis window : used by date_spine and incremental filters.
+  start_date: "2025-10-01"
+  end_date:   "2026-06-30"

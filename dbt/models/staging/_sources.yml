@@ -1,0 +1,62 @@
+version: 2
+
+# dbt-duckdb uses `meta.external_location` to register Parquet files on S3/MinIO
+# as queryable sources. The glob pulls every partition.
+sources:
+
+  - name: raw_ga4
+    description: "GA4 events landed in bronze (Parquet on MinIO)."
+    meta:
+      external_location: "s3://{{ env_var('MINIO_BUCKET_BRONZE', 'tessera-bronze') }}/ga4/{name}/dt=*/part-*.parquet"
+    tables:
+      - name: events
+        description: "Every GA4 event (page_view, view_item, add_to_cart, begin_checkout, purchase)."
+        columns:
+          - name: event_id
+            tests: [not_null, unique]
+          - name: event_name
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ["page_view", "view_item", "add_to_cart", "begin_checkout", "purchase", "session_start"]
+
+  - name: raw_meta
+    description: "Meta Pixel / Conversion API events."
+    meta:
+      external_location: "s3://{{ env_var('MINIO_BUCKET_BRONZE', 'tessera-bronze') }}/meta/{name}/dt=*/part-*.parquet"
+    tables:
+      - name: pixel_events
+        columns:
+          - name: event_id
+            tests: [not_null, unique]
+
+  - name: raw_shopify
+    description: "Shopify customers, orders, and line items."
+    meta:
+      external_location: "s3://{{ env_var('MINIO_BUCKET_BRONZE', 'tessera-bronze') }}/shopify/{name}/dt=*/part-*.parquet"
+    tables:
+      - name: customers
+        columns:
+          - name: customer_id
+            tests: [not_null, unique]
+      - name: orders
+        columns:
+          - name: order_id
+            tests: [not_null, unique]
+          - name: customer_id
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw_shopify', 'customers')
+                  field: customer_id
+      - name: line_items
+
+  - name: raw_email
+    description: "Email platform events (Mailchimp-like schema)."
+    meta:
+      external_location: "s3://{{ env_var('MINIO_BUCKET_BRONZE', 'tessera-bronze') }}/email/{name}/dt=*/part-*.parquet"
+    tables:
+      - name: events
+        columns:
+          - name: event_id
+            tests: [not_null, unique]

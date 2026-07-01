@@ -1,0 +1,70 @@
+version: 2
+
+models:
+  - name: dim_users
+    description: "One row per unified user. Contains pseudonymised PII (email_hash) and consent status."
+    columns:
+      - name: unified_user_id
+        tests: [not_null, unique]
+      - name: consent_status
+        tests:
+          - accepted_values:
+              values: ["granted", "anonymous"]
+
+  - name: dim_channels
+    description: "Channel dimension (seeded from CSV)."
+    columns:
+      - name: channel_key
+        tests: [not_null, unique]
+
+  - name: dim_dates
+    description: "Date spine for the analysis window."
+    columns:
+      - name: date_day
+        tests: [not_null, unique]
+
+  - name: fct_touchpoints
+    description: "Every attributable touchpoint, already linked to a conversion."
+    columns:
+      - name: touchpoint_id
+        tests: [not_null]
+      - name: channel_key
+        tests:
+          - relationships:
+              to: ref('dim_channels')
+              field: channel_key
+
+  - name: fct_sessions
+    columns:
+      - name: unified_user_id
+        tests:
+          - relationships:
+              to: ref('dim_users')
+              field: unified_user_id
+
+  - name: fct_conversions
+    description: "Conversions with four attribution models as columns."
+    columns:
+      - name: conversion_id
+        tests: [not_null]
+      - name: unified_user_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_users')
+              field: unified_user_id
+      - name: revenue_linear
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+  - name: fct_funnel_steps
+    description: "Funnel volumes per acquisition channel (1 row per channel)."
+    columns:
+      - name: channel_key
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              to: ref('dim_channels')
+              field: channel_key

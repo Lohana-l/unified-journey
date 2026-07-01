@@ -1,0 +1,136 @@
+version: 2
+
+# The intermediate layer is where the differentiating logic lives: the identity
+# graph (label propagation in SQL), session stitching, and the four attribution
+# models. Each model below is documented and contracted, like staging and marts.
+
+models:
+  - name: int_identity__matches
+    description: >
+      Pair-wise, symmetric identity edges. One row means "these two raw
+      identifiers belong to the same person", with a confidence tag.
+      Cross-source matches (L1) require consent_status = 'granted' on both ends;
+      self-anchor edges (L2) guarantee every identifier is at least its own node.
+    columns:
+      - name: raw_id_src
+        description: "Source endpoint of the edge, formatted as 'source:value'."
+        tests: [not_null]
+      - name: raw_id_dst
+        description: "Destination endpoint of the edge, formatted as 'source:value'."
+        tests: [not_null]
+      - name: match_type
+        description: "Rule that produced the edge."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["email_hash", "logged_in_user_id", "self"]
+      - name: confidence
+        description: "Trust level of the match rule."
+        tests:
+          - accepted_values:
+              values: ["high", "medium"]
+
+  - name: int_identity__graph
+    description: >
+      One row per raw identifier carrying its canonical unified_user_id, computed
+      by label propagation over int_identity__matches (union-find equivalent).
+      The singular test assert_identity_graph_no_orphans.sql guarantees no
+      identifier is left without a component.
+    columns:
+      - name: raw_id
+        description: "Natural raw identifier, formatted as 'source:value'."
+        tests: [not_null, unique]
+      - name: raw_source
+        description: "Source prefix parsed from raw_id."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["ga_client", "shopify_customer", "meta_fbp", "email_subscriber", "email_hash"]
+      - name: unified_user_id
+        description: "Canonical pseudonymised user id (MD5 of the component label)."
+        tests: [not_null]
+
+  - name: int_sessions__stitched
+    description: >
+      GA4 events enriched with the unified_user_id, re-sessionised across devices
+      when the inter-event gap exceeds var('session_timeout_minutes').
+    columns:
+      - name: event_id
+        description: "GA4 event identifier (grain of the model)."
+        tests: [not_null, unique]
+      - name: channel_key
+        description: "Acquisition channel, inherited from staging."
+        tests: [not_null]
+      - name: stitched_session_id
+        description: "Per-user running session number."
+        tests: [not_null]
+
+  - name: int_touchpoints__enriched
+    description: >
+      Every attributable touchpoint (web, paid, email) paired with the conversion
+      it can take credit for, within var('attribution_window_days'). The grain is
+      one row per (touchpoint, conversion) pair, so touchpoint_id is not unique.
+    columns:
+      - name: touchpoint_id
+        description: "Identifier of the touchpoint event."
+        tests: [not_null]
+      - name: source
+        description: "Origin of the touchpoint."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["ga4", "meta", "email"]
+      - name: unified_user_id
+        description: "Canonical user the touchpoint and conversion belong to."
+        tests: [not_null]
+      - name: conversion_id
+        description: "Conversion (Shopify order) the touchpoint is attributed to."
+        tests: [not_null]
+      - name: channel_key
+        description: "Acquisition channel of the touchpoint."
+        tests: [not_null]
+
+  - name: int_touchpoints__attribution
+    description: >
+      The four attribution models (first_touch, last_touch, linear,
+      position_based) implemented side-by-side, one row per
+      (conversion, touchpoint, model). The singular test
+      assert_attribution_weights_sum_to_one.sql enforces SUM(weight) = 1.0 per
+      (conversion_id, attribution_model).
+    columns:
+      - name: conversion_id
+        description: "Conversion the weight applies to."
+        tests: [not_null]
+      - name: touchpoint_id
+        description: "Touchpoint receiving the weight."
+        tests: [not_null]
+      - name: attribution_model
+        description: "Which of the four models this row belongs to."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["first_touch", "last_touch", "linear", "position_based"]
+      - name: weight
+        description: "Fraction of the conversion credited to this touchpoint (0 to 1)."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 1
+
+  - name: int_funnel__steps
+    description: >
+      One row per (unified_user_id, stitched_session_id) with a 0/1 flag for each
+      funnel step reached. Feeds the monotonic-decay funnel checked by
+      assert_funnel_monotonic_decay.sql.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [unified_user_id, stitched_session_id]
+    columns:
+      - name: unified_user_id
+        description: "Canonical user of the session."
+        tests: [not_null]
+      - name: step_5_purchase
+        description: "1 if the session reached a purchase event, else 0."
+        tests:
+          - accepted_values:
+              values: [0, 1]

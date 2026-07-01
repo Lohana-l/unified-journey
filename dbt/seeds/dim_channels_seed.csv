@@ -1,0 +1,10 @@
+channel_key,source,medium,channel_display_name,channel_group,is_paid,conversion_multiplier
+paid_social,meta,cpc,Meta Ads,Paid Social,true,1.0
+paid_social_tt,tiktok,cpc,TikTok Ads,Paid Social,true,0.7
+paid_search,google,cpc,Google Ads Search,Paid Search,true,1.4
+organic_search,google,organic,Google Organic,Organic Search,false,1.2
+email,mailchimp,email,Email Campaigns,Email,false,2.8
+direct,direct,none,Direct,Direct,false,2.0
+display,google,display,Google Display,Display,true,0.5
+referral,partner,referral,Partner Referral,Referral,false,1.3
+social_organic,instagram,social,Instagram Organic,Organic Social,false,0.8

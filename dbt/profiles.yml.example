@@ -1,0 +1,29 @@
+# Copy to profiles.yml or set DBT_PROFILES_DIR=./dbt.
+# Everything is overridable by env var so the same profile runs locally and in CI.
+#
+# How dbt-duckdb reads from MinIO:
+#   - DuckDB httpfs extension opens Parquet directly over S3.
+#   - The `extensions` block preloads the extensions on session start.
+#   - The `secrets` block creates a DuckDB SECRET that holds the MinIO creds.
+#
+# In production (AWS S3 real), you drop the endpoint_url and use IAM role.
+
+tessera:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('DUCKDB_PATH', '../warehouse/tessera.duckdb') }}"
+      threads: 4
+      extensions:
+        - httpfs
+      # DuckDB SECRET: replaces old settings.s3_* approach. Works on DuckDB 0.10+.
+      secrets:
+        - type: s3
+          name: minio_secret
+          key_id:     "{{ env_var('MINIO_ROOT_USER', 'minioadmin') }}"
+          secret:     "{{ env_var('MINIO_ROOT_PASSWORD', 'minioadmin') }}"
+          region:     "us-east-1"
+          endpoint:   "{{ env_var('MINIO_HOST', 'localhost:9000') }}"
+          url_style:  "path"
+          use_ssl:    "false"
