@@ -1,0 +1,118 @@
+name: CI
+
+# ---------------------------------------------------------------------------
+# Fast CI: lint + unit tests + dbt compile + end-to-end smoke test on the
+# synthetic seed data. No external services needed, MinIO runs in a service
+# container and the pipeline uses the built-in seed generator when no API
+# credentials are present.
+# ---------------------------------------------------------------------------
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      MINIO_ENDPOINT_LOCAL: http://localhost:9000
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_BUCKET_BRONZE: bronze
+      MINIO_BUCKET_SILVER: silver
+      MINIO_BUCKET_GOLD: gold
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Format check (ruff format --check)
+        run: ruff format --check .
+
+      - name: SQL lint (sqlfluff - dbt models)
+        run: sqlfluff lint dbt/models --dialect duckdb
+        continue-on-error: true  # styling warnings should not break CI
+
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio:RELEASE.2024-12-13T22-19-12Z server /data
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:9000/minio/health/live && break
+            echo "waiting for MinIO ($i)..."; sleep 2
+          done
+
+      - name: Create buckets (bronze, silver, gold)
+        run: |
+          python - <<'PY'
+          import boto3
+          s3 = boto3.client(
+              "s3",
+              endpoint_url="http://localhost:9000",
+              aws_access_key_id="minioadmin",
+              aws_secret_access_key="minioadmin",
+          )
+          for bucket in ("bronze", "silver", "gold"):
+              try:
+                  s3.create_bucket(Bucket=bucket)
+              except s3.exceptions.BucketAlreadyOwnedByYou:
+                  pass
+          PY
+
+      - name: Unit tests (pytest)
+        run: pytest -q tests/unit
+
+      - name: Seed synthetic data
+        run: python -m seed.generate_sample_data --days 14 --n-people 500
+
+      - name: dbt deps + compile
+        working-directory: dbt
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+        run: |
+          mkdir -p ../warehouse
+          cp profiles.yml.example profiles.yml
+          dbt deps
+          dbt compile --target dev
+
+      - name: dbt build (end-to-end smoke)
+        working-directory: dbt
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+        run: |
+          dbt seed  --target dev
+          dbt run   --target dev
+          dbt test  --target dev
+
+      - name: Soda scan
+        run: |
+          soda scan -d tessera \
+            -c quality/soda/configuration.yml \
+            quality/soda/checks.yml
+        continue-on-error: true  # Soda warnings do not fail the build
+
+      - name: Integration smoke test
+        run: pytest -q tests/integration
