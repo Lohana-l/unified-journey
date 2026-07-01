@@ -1,0 +1,56 @@
+id: ingest_all
+namespace: tessera
+
+# ----------------------------------------------------------------------------
+# Pulls raw events from every connected source into the bronze layer on MinIO.
+# Sources without credentials fall through to the synthetic seed generator -
+# the project always has a working dataset, even on a clean laptop.
+# ----------------------------------------------------------------------------
+
+description: |
+  Ingest GA4, Meta, Shopify and Email events into MinIO bronze (s3a://bronze).
+  Falls back to synthetic data generation when no credentials are configured.
+
+variables:
+  python_image: ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+  workdir: /app
+
+tasks:
+  - id: prepare_workspace
+    type: io.kestra.plugin.core.flow.WorkingDirectory
+    tasks:
+
+      - id: clone_repo
+        type: io.kestra.plugin.core.storage.LocalFiles
+        inputs:
+          - name: requirements.txt
+            content: "{{ read('requirements.txt') }}"
+
+      - id: ingest
+        type: io.kestra.plugin.scripts.python.Script
+        warningOnStdErr: false
+        beforeCommands:
+          - pip install --quiet -r requirements.txt
+        env:
+          MINIO_ENDPOINT: "{{ envs.minio_endpoint ?? 'http://minio:9000' }}"
+          MINIO_ACCESS_KEY: "{{ secret('MINIO_ACCESS_KEY') }}"
+          MINIO_SECRET_KEY: "{{ secret('MINIO_SECRET_KEY') }}"
+          MINIO_BUCKET_BRONZE: bronze
+          GA4_PROPERTY_ID: "{{ secret('GA4_PROPERTY_ID') }}"
+          GA4_CREDENTIALS_PATH: "{{ secret('GA4_CREDENTIALS_PATH') }}"
+          META_ACCESS_TOKEN: "{{ secret('META_ACCESS_TOKEN') }}"
+          META_AD_ACCOUNT_ID: "{{ secret('META_AD_ACCOUNT_ID') }}"
+          META_PIXEL_ID: "{{ secret('META_PIXEL_ID') }}"
+          SHOPIFY_SHOP: "{{ secret('SHOPIFY_SHOP') }}"
+          SHOPIFY_ADMIN_TOKEN: "{{ secret('SHOPIFY_ADMIN_TOKEN') }}"
+        script: |
+          from ingestion.main import run_ingest
+          # `run_ingest --all` will dispatch each source extractor and seed the
+          # rest with synthetic data; rich logging goes to stdout.
+          run_ingest(sources=None, allow_synthetic=True)
+
+errors:
+  - id: notify_failure
+    type: io.kestra.plugin.core.log.Log
+    level: ERROR
+    message: "Ingestion flow failed, see task logs for the failing source."

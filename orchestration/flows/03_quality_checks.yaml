@@ -1,0 +1,29 @@
+id: quality_checks
+namespace: tessera
+
+description: |
+  Run Soda Core data-quality scans against the gold marts.
+  Soda complements dbt tests by adding distribution checks, freshness windows
+  and anomaly detection that schema tests cannot easily express.
+
+tasks:
+  - id: workdir
+    type: io.kestra.plugin.core.flow.WorkingDirectory
+    tasks:
+
+      - id: soda_scan
+        type: io.kestra.plugin.scripts.python.Commands
+        beforeCommands:
+          - pip install --quiet soda-core==3.5.5 soda-core-duckdb==3.5.5
+        env:
+          MINIO_ACCESS_KEY: "{{ secret('MINIO_ACCESS_KEY') }}"
+          MINIO_SECRET_KEY: "{{ secret('MINIO_SECRET_KEY') }}"
+        commands:
+          - cd /app
+          - soda scan -d tessera -c quality/soda/configuration.yml quality/soda/checks.yml
+
+errors:
+  - id: notify_failure
+    type: io.kestra.plugin.core.log.Log
+    level: WARN
+    message: "Soda scan reported failed checks, investigate the warning before publishing the dashboard."

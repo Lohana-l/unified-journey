@@ -1,0 +1,46 @@
+id: full_pipeline
+namespace: tessera
+
+description: |
+  End-to-end orchestration: ingest, transform, quality.
+  Designed to run nightly at 03:00 Europe/Paris; can also be triggered
+  manually from the Kestra UI for ad-hoc backfills.
+
+triggers:
+  - id: nightly
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 3 * * *"
+    timezone: Europe/Paris
+
+tasks:
+  - id: ingest
+    type: io.kestra.plugin.core.flow.Subflow
+    namespace: tessera
+    flowId: ingest_all
+    wait: true
+    transmitFailed: true
+
+  - id: transform
+    type: io.kestra.plugin.core.flow.Subflow
+    namespace: tessera
+    flowId: transform_dbt
+    wait: true
+    transmitFailed: true
+    inputs:
+      dbt_target: dev
+      full_refresh: false
+
+  - id: quality
+    type: io.kestra.plugin.core.flow.Subflow
+    namespace: tessera
+    flowId: quality_checks
+    wait: true
+    # quality is non-blocking on purpose: a Soda warning should not prevent
+    # the next nightly run from starting; alerts surface in the UI instead.
+    transmitFailed: false
+
+  - id: summary
+    type: io.kestra.plugin.core.log.Log
+    message: |
+      Full pipeline completed for {{ trigger.date ?? execution.startDate }}.
+      Bronze refreshed, marts rebuilt, Soda scan executed.

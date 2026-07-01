@@ -1,0 +1,47 @@
+id: transform_dbt
+namespace: tessera
+
+description: |
+  Compile and run the dbt-duckdb project.
+  Reads bronze via the DuckDB httpfs extension, builds the staging/marts
+  models, then runs every dbt schema test + custom singular test.
+
+inputs:
+  - id: dbt_target
+    type: STRING
+    defaults: dev
+    description: dbt target profile (dev / prod)
+
+  - id: full_refresh
+    type: BOOLEAN
+    defaults: false
+
+tasks:
+  - id: workdir
+    type: io.kestra.plugin.core.flow.WorkingDirectory
+    tasks:
+
+      - id: dbt_build
+        type: io.kestra.plugin.scripts.python.Commands
+        beforeCommands:
+          - pip install --quiet dbt-core==1.9.1 dbt-duckdb==1.9.1
+        env:
+          DBT_PROFILES_DIR: /app/dbt
+          MINIO_ACCESS_KEY: "{{ secret('MINIO_ACCESS_KEY') }}"
+          MINIO_SECRET_KEY: "{{ secret('MINIO_SECRET_KEY') }}"
+        commands:
+          - cd /app/dbt
+          - dbt deps
+          - dbt seed   --target {{ inputs.dbt_target }}
+          - dbt run    --target {{ inputs.dbt_target }}{{ inputs.full_refresh ? ' --full-refresh' : '' }}
+          - dbt test   --target {{ inputs.dbt_target }}
+
+  - id: log_done
+    type: io.kestra.plugin.core.log.Log
+    message: "dbt build + tests passed for target={{ inputs.dbt_target }}."
+
+errors:
+  - id: notify_failure
+    type: io.kestra.plugin.core.log.Log
+    level: ERROR
+    message: "dbt build failed, likely a broken model or failing test. Check the dbt log artefact."
