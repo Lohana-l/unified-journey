@@ -1,0 +1,29 @@
+-r requirements.txt
+
+# --- Synthetic data ---
+faker==33.1.0
+
+# --- dbt ---
+dbt-core==1.9.1
+dbt-duckdb==1.9.1
+
+# --- Linting & formatting ---
+ruff==0.8.4
+sqlfluff==3.2.5
+sqlfluff-templater-dbt==3.2.5
+
+# --- Testing ---
+pytest==8.3.4
+pytest-cov==6.0.0
+
+# --- Type checking ---
+mypy==1.13.0
+types-requests==2.32.0.20241016
+types-PyYAML==6.0.12.20240917
+
+# --- Pre-commit hooks ---
+pre-commit==4.0.1
+
+# --- Capture des visuels README (scripts/capture_assets.py) ---
+playwright==1.49.0
+pillow==11.0.0

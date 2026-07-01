@@ -1,0 +1,46 @@
+# Git
+.git
+.gitignore
+
+# Python artefacts
+__pycache__
+*.py[cod]
+*.pyo
+.pytest_cache
+.ruff_cache
+.mypy_cache
+*.egg-info
+build
+dist
+.venv
+venv
+
+# dbt (not needed in the Streamlit container)
+dbt/
+
+
+# Tests and docs
+tests/
+docs/
+scripts/
+
+# Orchestration and quality configs (runtime, not baked in)
+orchestration/
+quality/
+
+# Seed / ingestion (Streamlit reads from DuckDB, not from raw sources)
+seed/
+ingestion/
+
+# DuckDB warehouse (populated at runtime via docker volume)
+warehouse/
+
+# Env files - never bake secrets into an image
+.env
+.env.*
+
+# Misc
+*.md
+Makefile
+delete.md
+docker-compose*.yml

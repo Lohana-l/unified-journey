@@ -1,0 +1,33 @@
+# Runtime dependencies - pinned for reproducibility.
+# Python 3.11+ required.
+
+# --- Data processing ---
+duckdb==1.0.0
+pyarrow==18.1.0
+pandas==2.2.3
+numpy==2.1.3
+
+# --- Object storage (MinIO = S3 compatible) ---
+s3fs==2024.10.0
+boto3==1.35.81
+
+# --- API clients ---
+google-analytics-data==0.18.16
+requests==2.32.3
+tenacity==9.0.0
+
+# --- Data quality ---
+# 3.5.5 minimum : soda-core <=3.4.x exige protobuf<5, incompatible avec
+# dbt-core 1.9 (qui exige protobuf>=5). Vérifié par résolution uv le 2026-06-10.
+soda-core==3.5.5
+soda-core-duckdb==3.5.5
+
+# --- Web layer (Streamlit CDP monitoring dashboard) ---
+streamlit==1.40.2
+altair==5.5.0
+
+# --- Utils ---
+python-dotenv==1.0.1
+loguru==0.7.3
+pydantic==2.10.3
+pyyaml==6.0.2

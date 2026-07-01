@@ -1,0 +1,2 @@
+# Keeps the warehouse/ directory in git so dbt-duckdb can write the
+# DuckDB file here in a fresh checkout (CI). The .duckdb itself is gitignored.
